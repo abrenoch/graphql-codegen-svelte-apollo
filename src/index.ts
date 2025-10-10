@@ -53,7 +53,7 @@ module.exports = {
 
     const imports = [
       `import type { ApolloClient, ObservableQuery } from "@apollo/client";`,
-      `import { readable } from "svelte/store";`,
+      `import { get, readable } from "svelte/store";`,
       `import gql from "graphql-tag"`,
     ];
 
@@ -70,7 +70,7 @@ module.exports = {
         if (o.operation == "query") {
           operation = `export const ${o.name.value} = (
             client: ApolloClient,
-            options: Omit<ApolloClient.WatchQueryOptions<${op}, ${opv}>, "query" | "returnPartialData">
+            options: Omit<ApolloClient.WatchQueryOptions<${op}, ${opv}>, "query" | "returnPartialData"> & { immediate?: boolean }
           ) => {
             const query = client.watchQuery<${op}, ${opv}>({
               query: ${pascalCase(o.name.value)}Doc,
@@ -81,6 +81,9 @@ module.exports = {
               { ...currentResult },
               (set) => { query.subscribe((v: any) => set({ ...v })) }
             );
+            if (options.immediate !== false) {
+              get(result);
+            }
             return {
               ...result,
               query,
