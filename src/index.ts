@@ -61,7 +61,7 @@ module.exports = {
       imports.push(`import client from "${config.clientPath}";`);
     }
 
-    const clientArg = config.clientPath ? "" : "\nclient: ApolloClient,"
+    const clientArg = config.clientPath ? "" : "\n  client: ApolloClient,"
 
     const ops = operations
       .map((o) => {
