@@ -61,7 +61,7 @@ module.exports = {
       imports.push(`import client from "${config.clientPath}";`);
     }
 
-    const clientArg = config.clientPath ? "" : "client: ApolloClient,"
+    const clientArg = config.clientPath ? "" : "\nclient: ApolloClient,"
 
     const ops = operations
       .map((o) => {
@@ -74,68 +74,66 @@ module.exports = {
         const opv = `${op}Variables`;
         let operation;
         if (o.operation == "query") {
-          operation = `export const ${o.name!.value} = (
-            ${clientArg}
-            options: Omit<ApolloClient.WatchQueryOptions<${op}, ${opv}>, "query" | "returnPartialData"> & { immediate?: boolean }
-          ) => {
-            const query = client.watchQuery<${op}, ${opv}>({
-              query: ${pascalCase(o.name!.value)}Doc,
-              ...options,
-            });
-            const currentResult = query.getCurrentResult() as any;
-            const result = readable<ObservableQuery.Result<${op} | undefined, "empty" | "complete">>(
-              { ...currentResult },
-              (set) => { query.subscribe((v: any) => set({ ...v })) }
-            );
-            if (options.immediate !== false) {
-              get(result);
-            }
-            return {
-              ...result,
-              query,
-            };
-          }
-        `;
+          operation = `
+export const ${o.name!.value} = (${clientArg}
+  options: Omit<ApolloClient.WatchQueryOptions<${op}, ${opv}>, "query" | "returnPartialData"> & { immediate?: boolean }
+) => {
+  const query = client.watchQuery<${op}, ${opv}>({
+    query: ${pascalCase(o.name!.value)}Doc,
+    ...options,
+  });
+  const currentResult = query.getCurrentResult() as any;
+  const result = readable<ObservableQuery.Result<${op} | undefined, "empty" | "complete">>(
+    { ...currentResult },
+    (set) => { query.subscribe((v: any) => set({ ...v })) }
+  );
+  if (options.immediate !== false) {
+    get(result);
+  }
+  return {
+    ...result,
+    query,
+  };
+}`;
           if (config.asyncQuery) {
             operation =
               operation +
               `
-              export const Async${o.name!.value} = (
-                ${clientArg}
-                options: Omit<ApolloClient.QueryOptions<${op}, ${opv}>, "query">
-              ) => {
-                return client.query<${op}>({query: ${pascalCase(
-                o.name!.value
-              )}Doc, ...options})
-              }
+  export const Async${o.name!.value} = (${clientArg}
+    options: Omit<ApolloClient.QueryOptions<${op}, ${opv}>, "query">
+  ) => {
+    return client.query<${op}>({query: ${pascalCase(
+    o.name!.value
+  )}Doc, ...options})
+}
             `;
           }
         }
         if (o.operation == "mutation") {
-          operation = `export const ${o.name!.value} = (
-            ${clientArg}
-            options: Omit<ApolloClient.MutateOptions<${op}, ${opv}>, "mutation">
-          ) => {
-            const m = client.mutate<${op}, ${opv}>({
-              mutation: ${pascalCase(o.name!.value)}Doc,
-              ...options,
-            });
-            return m;
-          }`;
+          operation = `
+export const ${o.name!.value} = (${clientArg}
+  options: Omit<ApolloClient.MutateOptions<${op}, ${opv}>, "mutation">
+) => {
+  const m = client.mutate<${op}, ${opv}>({
+    mutation: ${pascalCase(o.name!.value)}Doc,
+    ...options,
+  });
+  return m;
+}`;
         }
         if (o.operation == "subscription") {
-          operation = `export const ${o.name!.value} = (
-            ${clientArg}
-            options: Omit<ApolloClient.SubscribeOptions<${op}, ${opv}>, "query">
-          ) => {
-            const q = client.subscribe<${op}, ${opv}>({
-                query: ${pascalCase(o.name!.value)}Doc,
-                ...options,
-            });
-            return q;
-          }`;
+          operation = `
+export const ${o.name!.value} = (${clientArg}
+  options: Omit<ApolloClient.SubscribeOptions<${op}, ${opv}>, "query">
+) => {
+  const q = client.subscribe<${op}, ${opv}>({
+    query: ${pascalCase(o.name!.value)}Doc,
+    ...options,
+  });
+  return q;
+}`;
         }
-        return operation;
+        return operation?.trim();
       })
       .join("\n");
     return {
