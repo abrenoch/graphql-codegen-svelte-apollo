@@ -29,11 +29,15 @@ module.exports = {
             `import { get, readable } from "svelte/store";`,
             `import gql from "graphql-tag"`,
         ];
+        if (config.clientPath) {
+            imports.push(`import client from "${config.clientPath}";`);
+        }
+        const clientArg = config.clientPath ? "" : "client: ApolloClient,";
         const ops = operations
             .map((o) => {
-            // const dsl = `export const ${o.name?.value}Doc: TypedDocumentNode<${o.name?.value}> = gql\`${
+            // const dsl = `export const ${o.name!?.value}Doc: TypedDocumentNode<${o.name!?.value}> = gql\`${
             //   documents.find((d) =>
-            //     d.rawSDL.includes(`${o.operation} ${o.name.value}`)
+            //     d.rawSDL.includes(`${o.operation} ${o.name!.value}`)
             //   ).rawSDL
             // }\``;
             const op = `${(0, pascal_case_1.pascalCase)(o.name.value)}${(0, pascal_case_1.pascalCase)(o.operation)}`;
@@ -41,7 +45,7 @@ module.exports = {
             let operation;
             if (o.operation == "query") {
                 operation = `export const ${o.name.value} = (
-            client: ApolloClient,
+            ${clientArg}
             options: Omit<ApolloClient.WatchQueryOptions<${op}, ${opv}>, "query" | "returnPartialData"> & { immediate?: boolean }
           ) => {
             const query = client.watchQuery<${op}, ${opv}>({
@@ -67,7 +71,7 @@ module.exports = {
                         operation +
                             `
               export const Async${o.name.value} = (
-                client: ApolloClient,
+                ${clientArg}
                 options: Omit<ApolloClient.QueryOptions<${op}, ${opv}>, "query">
               ) => {
                 return client.query<${op}>({query: ${(0, pascal_case_1.pascalCase)(o.name.value)}Doc, ...options})
@@ -77,7 +81,7 @@ module.exports = {
             }
             if (o.operation == "mutation") {
                 operation = `export const ${o.name.value} = (
-            client: ApolloClient,
+            ${clientArg}
             options: Omit<ApolloClient.MutateOptions<${op}, ${opv}>, "mutation">
           ) => {
             const m = client.mutate<${op}, ${opv}>({
@@ -89,7 +93,7 @@ module.exports = {
             }
             if (o.operation == "subscription") {
                 operation = `export const ${o.name.value} = (
-            client: ApolloClient,
+            ${clientArg}
             options: Omit<ApolloClient.SubscribeOptions<${op}, ${opv}>, "query">
           ) => {
             const q = client.subscribe<${op}, ${opv}>({
